@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -155,12 +156,40 @@ func statusShort(panes []paneInfo, threshold time.Duration) string {
 
 // listTmuxPanes runs tmux list-panes and returns parsed results.
 func listTmuxPanes() ([]paneInfo, error) {
-	cmd := exec.Command("tmux", "list-panes", "-a", "-F", "#{pane_id}\t#{pane_current_command}\t#{pane_pid}\t#{pane_current_path}")
+	return listTmuxPanesFiltered("")
+}
+
+// listTmuxPanesFiltered lists panes, optionally filtered to a specific session.
+// If session is empty, all panes are listed.
+func listTmuxPanesFiltered(session string) ([]paneInfo, error) {
+	format := "#{pane_id}\t#{pane_current_command}\t#{pane_pid}\t#{pane_current_path}"
+	var args []string
+	if session != "" {
+		args = []string{"list-panes", "-s", "-t", session, "-F", format}
+	} else {
+		args = []string{"list-panes", "-a", "-F", format}
+	}
+	cmd := exec.Command("tmux", args...)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("tmux list-panes: %w", err)
 	}
 	return parsePaneList(string(output)), nil
+}
+
+// currentTmuxSession returns the session name for the current pane
+// by looking up $TMUX_PANE.
+func currentTmuxSession() (string, error) {
+	paneID := os.Getenv("TMUX_PANE")
+	if paneID == "" {
+		return "", fmt.Errorf("$TMUX_PANE not set; not running inside tmux")
+	}
+	cmd := exec.Command("tmux", "display-message", "-t", paneID, "-p", "#{session_name}")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("tmux display-message: %w", err)
+	}
+	return strings.TrimSpace(string(output)), nil
 }
 
 // capturePaneOutput captures the last N lines of a tmux pane.

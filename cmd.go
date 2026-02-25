@@ -50,7 +50,7 @@ func runSubcommand(args []string) error {
 
 	switch args[0] {
 	case "panes":
-		return runPanes(os.Stdout)
+		return runPanes(args[1:], os.Stdout)
 	case "capture":
 		return runCapture(args[1:], os.Stdout)
 	case "send":
@@ -93,7 +93,7 @@ Global flags:
   --set-default-agent <name>     Set the default agent (persisted)
 
 Pane operations:
-  panes                          List coding agent panes
+  panes [--session name|--current]  List coding agent panes
   capture <pane_id> [--lines N]  Capture pane output
   history <pane_id> [--lines N]  Capture extended scrollback (default 1000)
   send <pane_id> <text...>       Send text to a pane
@@ -150,9 +150,26 @@ func shortDir(dir string) string {
 	return filepath.Base(dir)
 }
 
-// runPanes lists all coding agent panes.
-func runPanes(w io.Writer) error {
-	panes, err := listTmuxPanes()
+// runPanes lists coding agent panes, optionally filtered by session.
+func runPanes(args []string, w io.Writer) error {
+	var session string
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--session":
+			if i+1 < len(args) {
+				i++
+				session = args[i]
+			}
+		case "--current":
+			s, err := currentTmuxSession()
+			if err != nil {
+				return err
+			}
+			session = s
+		}
+	}
+
+	panes, err := listTmuxPanesFiltered(session)
 	if err != nil {
 		return err
 	}

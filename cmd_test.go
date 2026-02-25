@@ -137,7 +137,7 @@ esac
 	defer os.Setenv("PATH", origPath)
 
 	var buf bytes.Buffer
-	err := runPanes(&buf)
+	err := runPanes(nil, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -174,7 +174,7 @@ esac
 	defer os.Setenv("PATH", origPath)
 
 	var buf bytes.Buffer
-	err := runPanes(&buf)
+	err := runPanes(nil, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
