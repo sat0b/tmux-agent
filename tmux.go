@@ -103,6 +103,12 @@ var childLookupFn = lookupChildProcess
 // and returns only panes running a target command.
 // If the pane's direct command is not a target, it checks descendant processes.
 func parsePaneList(output string) []paneInfo {
+	return parsePaneListAll(output, false)
+}
+
+// parsePaneListAll parses tmux list-panes output. When all is true, it includes
+// all panes regardless of whether they run a target command.
+func parsePaneListAll(output string, all bool) []paneInfo {
 	var panes []paneInfo
 	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
 		if line == "" {
@@ -118,7 +124,7 @@ func parsePaneList(output string) []paneInfo {
 		if len(fields) >= 4 {
 			dir = fields[3]
 		}
-		if !isTargetCommand(cmd) {
+		if !all && !isTargetCommand(cmd) {
 			if child := childLookupFn(pid); child != "" {
 				cmd = child
 			} else {
@@ -156,12 +162,17 @@ func statusShort(panes []paneInfo, threshold time.Duration) string {
 
 // listTmuxPanes runs tmux list-panes and returns parsed results.
 func listTmuxPanes() ([]paneInfo, error) {
-	return listTmuxPanesFiltered("")
+	return listTmuxPanesOpts("", false)
 }
 
 // listTmuxPanesFiltered lists panes, optionally filtered to a specific session.
 // If session is empty, all panes are listed.
 func listTmuxPanesFiltered(session string) ([]paneInfo, error) {
+	return listTmuxPanesOpts(session, false)
+}
+
+// listTmuxPanesOpts lists panes with session filter and all flag.
+func listTmuxPanesOpts(session string, all bool) ([]paneInfo, error) {
 	format := "#{pane_id}\t#{pane_current_command}\t#{pane_pid}\t#{pane_current_path}"
 	var args []string
 	if session != "" {
@@ -174,7 +185,7 @@ func listTmuxPanesFiltered(session string) ([]paneInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("tmux list-panes: %w", err)
 	}
-	return parsePaneList(string(output)), nil
+	return parsePaneListAll(string(output), all), nil
 }
 
 // currentTmuxSession returns the session name for the current pane

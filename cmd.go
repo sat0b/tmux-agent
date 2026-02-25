@@ -93,7 +93,7 @@ Global flags:
   --set-default-agent <name>     Set the default agent (persisted)
 
 Pane operations:
-  panes [--session name|--current]  List coding agent panes
+  panes [--session name|--current] [--all]  List panes (default: agents only)
   capture <pane_id> [--lines N]  Capture pane output
   history <pane_id> [--lines N]  Capture extended scrollback (default 1000)
   send <pane_id> <text...>       Send text to a pane
@@ -153,6 +153,7 @@ func shortDir(dir string) string {
 // runPanes lists coding agent panes, optionally filtered by session.
 func runPanes(args []string, w io.Writer) error {
 	var session string
+	var all bool
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--session":
@@ -166,10 +167,12 @@ func runPanes(args []string, w io.Writer) error {
 				return err
 			}
 			session = s
+		case "--all":
+			all = true
 		}
 	}
 
-	panes, err := listTmuxPanesFiltered(session)
+	panes, err := listTmuxPanesOpts(session, all)
 	if err != nil {
 		return err
 	}
